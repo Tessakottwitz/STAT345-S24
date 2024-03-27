@@ -1,0 +1,173 @@
+---
+title: "Midterm Project - Shot Charts"
+author: "Tessa Kottwitz"
+date: "3-29-2024"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(out.width = '80%', collapse = TRUE, warning=FALSE, message=FALSE)
+library(devtools)
+library(ggplot2)
+library(tidyverse)
+library(nbastatR)
+library(BasketballAnalyzeR)
+
+Sys.setenv(VROOM_CONNECTION_SIZE = "262144")
+
+selected_years <-c(2000, 2005, 2010, 2015, 2020) # choose years to analyze
+selected_team <- "Milwaukee Bucks" #choose team to analyze
+
+shot_data_list <-list() # create list for for loop
+
+for(year in selected_years) { #for each year in selected year
+  shot_data <- teams_shots(teams = selected_team, seasons = year)
+  # get the shot data for each year and the selected team and add it to the list
+  shot_data_list[[paste0("shot_data_", year)]] <- shot_data
+} # used a for loop so the code was reproducible
+
+combined_shot_data <-bind_rows(shot_data_list) %>%
+  # combine rows of data from selected years
+  select(yearSeason, nameTeam, typeEvent, locationX, locationY)
+  # select only columns of interest
+
+team_colors <-c("#00471B", "#D2B48C","#990000") #selected team colors
+
+# finds percentage of overall made shots:
+total_shots <-nrow(combined_shot_data) 
+made_shots <-sum(combined_shot_data$typeEvent == "Made Shot") 
+percentage_made_shots <- round((made_shots/total_shots) * 100, 2) 
+```
+
+## Graphic
+- This graphic shows the shot charts of The Milwaukee Bucks from 2000 to 2020 in five year intervals.
+- 45.7% of shots were made.
+```{r graphic, echo=FALSE}
+# Drawing the basketball court:
+full_court <- ggplot(data=data.frame(x=1,y=1),aes(x,y))+ 
+geom_path(data=data.frame(x=c(-25,-25,25,25,-25),y=c(-47,47,47,-47,-47)))+ #outside box
+geom_path(data=data.frame(x=c(-25,25),y=c(0,0)))+ #halfcourt line
+   ###halfcourt semicircle:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+   ###solid FT semicircle above FT line:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(28-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(28-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+   ###dashed FT semicircle below FT line:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(28+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y),linetype='dashed')+
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(28+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y),linetype='dashed')+
+   ###key:
+geom_path(data=data.frame(x=c(-8,-8,8,8,-8),y=c(47,28,28,47,47)))+
+geom_path(data=data.frame(x=-c(-8,-8,8,8,-8),y=-c(47,28,28,47,47)))+
+   ###box inside the key:
+geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=c(47,28,28,47,47)))+
+geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=-c(47,28,28,47,47)))+
+   ###restricted area semicircle:
+geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=c(41.25-sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=-c(41.25-sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x,y=y))+
+   ###rim:
+geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=c(c(41.75+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(41.75-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=-c(c(41.75+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(41.75-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x,y=y))+
+   ###backboard:
+geom_path(data=data.frame(x=c(-3,3),y=c(43,43)),lineend='butt')+
+geom_path(data=data.frame(x=c(-3,3),y=-c(43,43)),lineend='butt')+
+   ###three-point line:
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=-c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x,y=y))+
+   ###fix aspect ratio to 1:1
+coord_fixed()
+
+# create plot on top of basketball court
+plot1 <- full_court + 
+  # scale data by dividing by 10 and subtracted 42.5 from the y coordinate to fit the basketball court
+  geom_tile(data = combined_shot_data, aes(x = locationX/10, y = (locationY/10 - 42.5), fill = typeEvent, width = 0.5, height = 0.5, alpha = 0.5)) +
+  # add color to correlate to selected teams colors
+  scale_fill_manual(values = c("Made Shot" = team_colors[1], "Missed Shot" = team_colors[2])) + 
+  coord_fixed() + 
+  # adding labels:
+  xlab("X Coordinate") +
+  ylab("Y Coordinate") +
+  ggtitle("Milwaukee Bucks Shot Locations in Different Years") + 
+  labs(fill = "Outcome of Shot") +
+  # separating data into different graphs by season
+  facet_wrap(~yearSeason, nrow = 1) + 
+  theme_void() +
+  theme(legend.position = "bottom") +
+  guides(alpha = FALSE)
+plot1
+
+```
+    
+## Breif Report
+
+Trends to notice:
+
+- The earlier seasons have many more 2-point shot attempts and they are spread out across the court.
+- 3-point shot attempts have increased throughout the years, especially in 2020.
+- All seasons have lots of shot attempts near the hoop, but they become more focused directly underneath the hoop in recent seasons.
+- There are multiple shots past the half-court line in each season.
+
+
+## Detailed Report
+
+- The graphic shows shot charts that span from 2000 to 2020 in 5-year intervals. I chose to show five seasons because while it still accurately showed the trends as time passed, it also made for an aesthetic and clear graphic. 
+
+- The drawn-out basketball court came from an online source: https://gist.github.com/edkupfer/6354964#file-ggplot-nba-fullcourt
+
+- The data is scaled to fit the drawn-out basketball court proportionally. To make the data fit, the x-coordinate and y-coordinate were divided by ten. The y-coordinate also needed to be subtracted by 42.5 to account for the shots that seemed to be out of bounds.
+
+## Detailed Report Continued
+
+- The function geom_tile along with setting a low alpha in ggplot allows the graphic to specifically show each shot without looking overcrowded. It also allowed the court to be seen through all the data.
+
+- Within the geom_tile function the parameter 'fill' was used. This created two different colored points and shows the difference between made and missed shots.
+
+- The opacity of the graph makes the graphic appear darker in some areas rather than others. By using this information trends can be created and we can analyze the data. In this case, by 2020 we see lots of green data underneath the hoop which creates a trend of made shots.
+
+
+## Clutch Shot Graphic 
+
+- This graphic shows the shot clutch charts of The Milwaukee Bucks from 2000 to 2020 in five year intervals.
+
+```{r clutch graphic, echo = FALSE}
+ # combine rows of data from selected years
+clutch_shot_data <-bind_rows(shot_data_list) %>%
+ # select only columns of interest
+  select(yearSeason, nameTeam, typeEvent, locationX, locationY, secondsRemaining) %>%
+  # filter data to only clutch shots
+  filter(secondsRemaining <= 2)
+
+# find number of rows in data, number of made shots, and find percentage:
+total_clutch_shots <-nrow(clutch_shot_data)
+made_clutch_shots <-sum(clutch_shot_data$typeEvent == "Made Shot")
+percentage_made_clutch_shots <- round((made_clutch_shots/total_clutch_shots) * 100, 2)
+
+# create graph on top of basketball court
+clutch_plot <-full_court +  
+  geom_point(data = clutch_shot_data, aes(x = locationX/10, y = ((locationY/10)- 42.5), color = typeEvent), alpha = 0.5) +
+  scale_color_manual(values = c("Made Shot" = team_colors[1], "Missed Shot" = team_colors[2])) +
+  coord_fixed() +
+  xlab("X Coordinate") +
+  ylab("Y Coordinate") +
+  ggtitle("Milwaukee Bucks Clutch Shot Locations in Different Years") +
+  labs(color = "Outcome of Shot") +
+  facet_wrap(~yearSeason, nrow = 1) +
+  theme_void() +
+  theme(legend.position = "bottom")
+clutch_plot
+
+```
+
+## Clutch Shot Graphic - Brief Report
+
+This data was filtered by when the seconds remaining on the clock were two or less:
+
+- Percentage of clutch shots made = 41.09%. This is a slight decrease compared to the percentage of all shots made.
+- This graph includes many of the shots we saw in the previous graph that were past the half-court line. 
+- There is a similar pattern seen regarding there being more clutch three-point attempts and the shot attempts in general have become less spread out. 
+  
+  
+  
+  
+
+
